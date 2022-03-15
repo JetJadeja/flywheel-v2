@@ -23,7 +23,7 @@ contract FlywheelCore is Auth {
     ERC20 public immutable rewardToken;
 
     /// @notice The fixed point factor of Flywheel.
-    uint224 internal constant ONE = 1e18;
+    uint224 public constant ONE = 1e18;
 
     /// @notice Creates a new FlywheelCore contract.
     /// @param _rewardToken The address of the token distributed among token holders.
