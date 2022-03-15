@@ -12,11 +12,11 @@ import {FlywheelStaticRewards} from "../rewards/FlywheelStaticRewards.sol";
 interface Comptroller {
     function admin() external returns (address);
 
-    function _addRewardsDistributor(address distributor) external returns (uint);
+    function _addRewardsDistributor(address distributor) external returns (uint256);
 }
 
 abstract contract CErc20 is ERC20 {
-    function mint(uint256 amount) external virtual returns(uint);
+    function mint(uint256 amount) external virtual returns (uint256);
 }
 
 contract FlywheelIntegrationTest is DSTestPlus {
@@ -25,10 +25,10 @@ contract FlywheelIntegrationTest is DSTestPlus {
 
     // Pool 8 comptroller
     Comptroller comptroller = Comptroller(0xc54172e34046c1653d1920d40333Dd358c7a1aF4);
-    
+
     // fTRIBE-8
     CErc20 fTRIBE = CErc20(0xFd3300A9a74b3250F1b2AbC12B47611171910b07);
-    
+
     ERC20 tribe = ERC20(0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B);
 
     // fTRIBE-8 whale
@@ -41,9 +41,9 @@ contract FlywheelIntegrationTest is DSTestPlus {
 
     function setUp() public {
         rewardToken = new MockERC20("test token", "TKN", 18);
-        
+
         flywheel = new FuseFlywheelCore(
-            rewardToken, 
+            rewardToken,
             FlywheelStaticRewards(address(0)),
             IFlywheelBooster(address(0)),
             address(this),
@@ -53,9 +53,9 @@ contract FlywheelIntegrationTest is DSTestPlus {
         rewards = new FlywheelStaticRewards(rewardToken, address(flywheel), address(this), Authority(address(0)));
 
         flywheel.setFlywheelRewards(rewards);
-        
+
         // add fTRIBE-8 to flywheel and add flywheel to the comptroller
-        flywheel.addMarketForRewards(fTRIBE);
+        flywheel.addMarket(fTRIBE);
         hevm.prank(comptroller.admin());
         require(comptroller._addRewardsDistributor(address(flywheel)) == 0);
 
@@ -63,7 +63,10 @@ contract FlywheelIntegrationTest is DSTestPlus {
         rewardToken.mint(address(rewards), 100 ether);
 
         // Start reward distribution at 1 token per second
-        rewards.setRewardsInfo(fTRIBE, FlywheelStaticRewards.RewardsInfo({rewardsPerSecond: 1 ether, rewardsEndTimestamp: 0}));
+        rewards.setRewardsInfo(
+            fTRIBE,
+            FlywheelStaticRewards.RewardsInfo({rewardsPerSecond: 1 ether, rewardsEndTimestamp: 0})
+        );
 
         // prime the flywheel storage for accurate gas benchmarking later
         rewardToken.mint(address(flywheel), 1);
@@ -75,18 +78,17 @@ contract FlywheelIntegrationTest is DSTestPlus {
     }
 
     function testIntegration() public {
-
         // store expected rewards per token (1 token per second over total supply)
         uint256 rewardsPerToken = (1 ether * 1 ether) / fTRIBE.totalSupply();
 
         // store expected user rewards (user balance times reward per second over 1 token)
-        uint256 userRewards = rewardsPerToken * fTRIBE.balanceOf(user) / 1 ether;
-        
+        uint256 userRewards = (rewardsPerToken * fTRIBE.balanceOf(user)) / 1 ether;
+
         // accrue rewards and check against expected
         require(flywheel.accrue(fTRIBE, user) == userRewards);
 
         // check market index
-        (uint224 index,) = flywheel.marketState(fTRIBE);
+        (uint224 index, ) = flywheel.marketState(fTRIBE);
         require(index == flywheel.ONE() + rewardsPerToken);
 
         // claim and check user balance
@@ -105,10 +107,10 @@ contract FlywheelIntegrationTest is DSTestPlus {
         uint256 rewardsPerToken2 = (10 ether * 1 ether) / fTRIBE.totalSupply();
         hevm.warp(block.timestamp + 10);
 
-        uint256 userRewards2 = rewardsPerToken2 * fTRIBE.balanceOf(user) / 1 ether;
+        uint256 userRewards2 = (rewardsPerToken2 * fTRIBE.balanceOf(user)) / 1 ether;
         require(flywheel.accrue(fTRIBE, user) == userRewards2);
 
-        (uint224 index2,) = flywheel.marketState(fTRIBE);
+        (uint224 index2, ) = flywheel.marketState(fTRIBE);
 
         require(index2 == index + rewardsPerToken2);
 
