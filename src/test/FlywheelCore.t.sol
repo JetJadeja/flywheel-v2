@@ -23,9 +23,9 @@ contract FlywheelTest is DSTestPlus {
         rewardToken = new MockERC20("test token", "TKN", 18);
 
         market = new MockMarket();
-        
+
         flywheel = new FlywheelCore(
-            rewardToken, 
+            rewardToken,
             FlywheelDynamicRewards(address(0)),
             IFlywheelBooster(address(0)),
             address(this),
@@ -38,7 +38,7 @@ contract FlywheelTest is DSTestPlus {
     }
 
     function testAddMarket() public {
-        flywheel.addMarketForRewards(market);
+        flywheel.addMarket(market);
         (uint224 index, uint32 timestamp) = flywheel.marketState(market);
         require(index == flywheel.ONE());
         require(timestamp == block.timestamp);
@@ -46,7 +46,7 @@ contract FlywheelTest is DSTestPlus {
 
     function testFailAddMarket() public {
         hevm.prank(address(1));
-        flywheel.addMarketForRewards(market);
+        flywheel.addMarket(market);
     }
 
     function testSetFlywheelRewards() public {
@@ -67,14 +67,14 @@ contract FlywheelTest is DSTestPlus {
 
         rewardToken.mint(address(market), 10 ether);
 
-        flywheel.addMarketForRewards(market);
-        
+        flywheel.addMarket(market);
+
         uint256 accrued = flywheel.accrue(market, user);
 
-        (uint224 index,) = flywheel.marketState(market);
+        (uint224 index, ) = flywheel.marketState(market);
 
         require(index == flywheel.ONE() + 2.5 ether);
-        require(flywheel.userIndex(market, user) == index);
+        require(flywheel.userIndices(market, user) == index);
         require(flywheel.rewardsAccrued(user) == 2.5 ether);
         require(accrued == 2.5 ether);
         require(flywheel.rewardsAccrued(user2) == 0 ether);
@@ -90,15 +90,15 @@ contract FlywheelTest is DSTestPlus {
 
         rewardToken.mint(address(market), 10 ether);
 
-        flywheel.addMarketForRewards(market);
-        
+        flywheel.addMarket(market);
+
         (uint256 accrued1, uint256 accrued2) = flywheel.accrue(market, user, user2);
 
-        (uint224 index,) = flywheel.marketState(market);
+        (uint224 index, ) = flywheel.marketState(market);
 
         require(index == flywheel.ONE() + 2.5 ether);
-        require(flywheel.userIndex(market, user) == index);
-        require(flywheel.userIndex(market, user2) == index);
+        require(flywheel.userIndices(market, user) == index);
+        require(flywheel.userIndices(market, user2) == index);
         require(flywheel.rewardsAccrued(user) == 2.5 ether);
         require(flywheel.rewardsAccrued(user2) == 7.5 ether);
         require(accrued1 == 2.5 ether);
@@ -139,15 +139,15 @@ contract FlywheelTest is DSTestPlus {
 
         rewardToken.mint(address(market), 10 ether);
 
-        flywheel.addMarketForRewards(market);
-        
+        flywheel.addMarket(market);
+
         uint256 accrued = flywheel.accrue(market, user);
         uint256 accrued2 = flywheel.accrue(market, user2);
 
-        (uint224 index,) = flywheel.marketState(market);
+        (uint224 index, ) = flywheel.marketState(market);
 
         require(index == flywheel.ONE() + 2.5 ether);
-        require(flywheel.userIndex(market, user) == index);
+        require(flywheel.userIndices(market, user) == index);
         require(flywheel.rewardsAccrued(user) == 2.5 ether);
         require(flywheel.rewardsAccrued(user2) == 7.5 ether);
         require(accrued == 2.5 ether);
@@ -163,31 +163,31 @@ contract FlywheelTest is DSTestPlus {
 
         rewardToken.mint(address(market), 10 ether);
 
-        flywheel.addMarketForRewards(market);
-        
+        flywheel.addMarket(market);
+
         (uint256 accrued, uint256 accrued2) = flywheel.accrue(market, user, user2);
 
-        (uint224 index,) = flywheel.marketState(market);
+        (uint224 index, ) = flywheel.marketState(market);
 
         require(index == flywheel.ONE() + 10 ether);
-        require(flywheel.userIndex(market, user) == index);
+        require(flywheel.userIndices(market, user) == index);
         require(flywheel.rewardsAccrued(user) == 10 ether);
         require(flywheel.rewardsAccrued(user2) == 0);
         require(accrued == 10 ether);
         require(accrued2 == 0);
 
         require(rewardToken.balanceOf(address(rewards)) == 10 ether);
-    
+
         market.mint(user2, 3 ether);
 
         rewardToken.mint(address(market), 4 ether);
-        
+
         (accrued, accrued2) = flywheel.accrue(market, user, user2);
 
-        (index,) = flywheel.marketState(market);
+        (index, ) = flywheel.marketState(market);
 
         require(index == flywheel.ONE() + 11 ether);
-        require(flywheel.userIndex(market, user) == index);
+        require(flywheel.userIndices(market, user) == index);
         require(flywheel.rewardsAccrued(user) == 11 ether);
         require(flywheel.rewardsAccrued(user2) == 3 ether);
         require(accrued == 11 ether);
@@ -208,12 +208,11 @@ contract FlywheelTest is DSTestPlus {
     }
 
     function testBoost() public {
-
         MockBooster booster = new MockBooster();
         booster.setBoost(user, 1 ether);
 
         flywheel = new FlywheelCore(
-            rewardToken, 
+            rewardToken,
             FlywheelDynamicRewards(address(0)),
             IFlywheelBooster(address(booster)),
             address(this),
@@ -231,14 +230,14 @@ contract FlywheelTest is DSTestPlus {
 
         rewardToken.mint(address(market), 10 ether);
 
-        flywheel.addMarketForRewards(market);
-        
+        flywheel.addMarket(market);
+
         uint256 accrued = flywheel.accrue(market, user);
 
-        (uint224 index,) = flywheel.marketState(market);
+        (uint224 index, ) = flywheel.marketState(market);
 
         require(index == flywheel.ONE() + 2.5 ether);
-        require(flywheel.userIndex(market, user) == index);
+        require(flywheel.userIndices(market, user) == index);
         require(flywheel.rewardsAccrued(user) == 5 ether);
         require(accrued == 5 ether);
         require(flywheel.rewardsAccrued(user2) == 0 ether);
